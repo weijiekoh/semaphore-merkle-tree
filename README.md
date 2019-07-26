@@ -1,8 +1,8 @@
 # semaphore-merkle-tree
 
-This package, soon to be published on npm, offers a Merkle tree implementation
-which is meant to work with the
-[Semaphore](https://github.com/kobigurk/semaphore) zero-knowledge signalling system.
+This package offers a Merkle tree implementation which is meant to work with
+the [Semaphore](https://github.com/kobigurk/semaphore) zero-knowledge
+signalling system.
 
 ## Installation
 
