@@ -13,15 +13,16 @@ const storage = new MemStorage()
 jest.setTimeout(9000)
 
 describe('tree test', function () {
-    let prefix = 'test';
+    const prefix = 'test';
     const default_value = '4';
-
+    const depth = 2
     const hasher = new Mimc7Hasher();
+
     const tree = new MerkleTree(
         prefix,
         storage,
         hasher,
-        2,
+        depth,
         default_value,
     );
 

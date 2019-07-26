@@ -39,8 +39,6 @@ export default class MerkleTree {
 		return key;
 	}
 
-
-
 	static update_log_to_key(prefix) {
 		return `${prefix}_update_log_index`;
 	}
@@ -136,7 +134,7 @@ export default class MerkleTree {
 	async update(index, element, update_log_index?) {
 		await this.lock.acquireAsync();
 		try {
-            console.log(`updating ${index}, ${element}`);
+            //console.log(`updating ${index}, ${element}`);
 			class UpdateTraverser {
                 public prefix: string
                 public storage: IStorage
@@ -198,7 +196,7 @@ export default class MerkleTree {
             );
 
             await this.traverse(index, traverser);
-            console.log(`traverser.current_element: ${traverser.current_element}`);
+            //console.log(`traverser.current_element: ${traverser.current_element}`);
             traverser.key_values_to_put.push({
                 key: MerkleTree.index_to_key(this.prefix, this.n_levels, 0),
                 value: traverser.current_element,
@@ -218,7 +216,7 @@ export default class MerkleTree {
             await this.storage.put_batch(traverser.key_values_to_put);
 
             const root = await this.root();
-            console.log(`updated root ${root}`);
+            //console.log(`updated root ${root}`);
 		} finally {
 			this.lock.release();
 		}
