@@ -17,6 +17,7 @@ describe('tree test', function () {
     const default_value = '4';
     const depth = 2
     const hasher = new Mimc7Hasher();
+    let rollback_root
 
     const tree = new MerkleTree(
         prefix,
@@ -44,6 +45,7 @@ describe('tree test', function () {
 
     it('tests insert', async () => {
         await tree.update(0, '5');
+        rollback_root = (await tree.path(0)).root;
         let {root, path_elements, path_index} = await tree.path(0);
         const calculated_root = hasher.hash(1,
             hasher.hash(0, '5', path_elements[0]),
@@ -104,14 +106,14 @@ describe('tree test', function () {
         }
 
         {
-            await tree.rollback(2);
+            await tree.rollback_to_root(rollback_root)
             const update_log_key = MerkleTree.update_log_to_key(prefix);
             const update_log_index = await tree.storage.get(update_log_key);
-            assert.equal(update_log_index, 0);
+            assert.equal(update_log_index, 1);
             const update_log_element_key = MerkleTree.update_log_element_to_key(prefix, update_log_index);
             const update_log_element = JSON.parse(await tree.storage.get(update_log_element_key));
             assert.equal(update_log_element.old_element, '4');
-            assert.equal(update_log_element.new_element, '5');
+            assert.equal(update_log_element.new_element, '6');
         }
     })
 })
