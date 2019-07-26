@@ -43,3 +43,18 @@ Returns the Merkle path to the leaf at the specified index
 ### `tree.rollback(updates)`
 
 Rolls back the tree by the specified number of updates
+
+## Building
+
+```bash
+git clone https://github.com/weijiekoh/semaphore-merkle-tree.git && \
+cd semaphore-merkle-tree && \
+npm i && \
+npm run build
+```
+
+## Testing
+
+```bash
+npm run test
+```

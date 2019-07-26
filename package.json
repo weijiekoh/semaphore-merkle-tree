@@ -4,7 +4,10 @@
   "description": "A TypeScript implementation of the Merkle tree used in the Semaphore zero-knowledge signalling system",
   "main": "build/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "build": "tsc",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test",
     "watch": "tsc --watch"
   },
   "repository": {
