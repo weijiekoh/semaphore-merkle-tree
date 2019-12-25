@@ -4,140 +4,140 @@ import { IHasher } from './hashers'
 const AwaitLock = require('await-lock')
 
 export default class MerkleTree {
-	public prefix: string
+    public prefix: string
     public storage: IStorage
     public hasher: IHasher
     public n_levels: number
     public zero_values: any[]
     public lock: any
 
-	constructor(prefix, storage, hasher, n_levels, zero_value) {
-		this.prefix = prefix;
-		this.storage = storage;
-		this.hasher = hasher;
-		this.n_levels = n_levels;
-		this.zero_values = [];
+    constructor(prefix, storage, hasher, n_levels, zero_value) {
+        this.prefix = prefix;
+        this.storage = storage;
+        this.hasher = hasher;
+        this.n_levels = n_levels;
+        this.zero_values = [];
 
-		let current_zero_value = zero_value;
-		this.zero_values.push(current_zero_value);
-		for (let i = 0; i < n_levels; i++) {
-			current_zero_value = this.hasher.hash(i, current_zero_value, current_zero_value);
-			this.zero_values.push(
-				current_zero_value.toString(),
-			);
-		}
-		this.lock = new AwaitLock();
-	}
+        let current_zero_value = zero_value;
+        this.zero_values.push(current_zero_value);
+        for (let i = 0; i < n_levels; i++) {
+            current_zero_value = this.hasher.hash(i, current_zero_value, current_zero_value);
+            this.zero_values.push(
+                current_zero_value.toString(),
+            );
+        }
+        this.lock = new AwaitLock();
+    }
 
-	static index_to_key(prefix, level, index) {
-		const key = `${prefix}_tree_${level}_${index}`;
-		return key;
-	}
+    static index_to_key(prefix, level, index) {
+        const key = `${prefix}_tree_${level}_${index}`;
+        return key;
+    }
 
-	static element_to_key(prefix, element) {
-		const key = `${prefix}_element_${element}`;
-		return key;
-	}
+    static element_to_key(prefix, element) {
+        const key = `${prefix}_element_${element}`;
+        return key;
+    }
 
-	static update_log_to_key(prefix) {
-		return `${prefix}_update_log_index`;
-	}
+    static update_log_to_key(prefix) {
+        return `${prefix}_update_log_index`;
+    }
 
-	static update_log_element_to_key(prefix, update_log_index) {
-		return `${prefix}_update_log_element_${update_log_index}`;
-	}
+    static update_log_element_to_key(prefix, update_log_index) {
+        return `${prefix}_update_log_element_${update_log_index}`;
+    }
 
-	async update_log(index, old_element, new_element, update_log_index, should_put_element_update) {
-		let ops: any[] = []
+    async update_log(index, old_element, new_element, update_log_index, should_put_element_update) {
+        let ops: any[] = []
 
-		const update_log_key = MerkleTree.update_log_to_key(this.prefix);
-		ops.push({
-			type: 'put',
-			key: update_log_key,
-			value: update_log_index.toString(),
-		});
+        const update_log_key = MerkleTree.update_log_to_key(this.prefix);
+        ops.push({
+            type: 'put',
+            key: update_log_key,
+            value: update_log_index.toString(),
+        });
 
-		if (should_put_element_update) {
-			const update_log_element_key = MerkleTree.update_log_element_to_key(this.prefix, update_log_index);
-			ops.push({
-				type: 'put',
-				key: update_log_element_key,
-				value: JSON.stringify({
-					index,
-					old_element,
-					new_element,
-				})
-			});
-		}
-		await this.storage.put_batch(ops);
-	}
+        if (should_put_element_update) {
+            const update_log_element_key = MerkleTree.update_log_element_to_key(this.prefix, update_log_index);
+            ops.push({
+                type: 'put',
+                key: update_log_element_key,
+                value: JSON.stringify({
+                    index,
+                    old_element,
+                    new_element,
+                })
+            });
+        }
+        await this.storage.put_batch(ops);
+    }
 
-	async root() {
-		let root = await this.storage.get_or_element(
-			MerkleTree.index_to_key(this.prefix, this.n_levels, 0),
-			this.zero_values[this.n_levels],
-		);
+    async root() {
+        let root = await this.storage.get_or_element(
+            MerkleTree.index_to_key(this.prefix, this.n_levels, 0),
+            this.zero_values[this.n_levels],
+        );
 
-		return root;
-	}
+        return root;
+    }
 
-	async element_index(element) {
-		const element_key = MerkleTree.element_to_key(this.prefix, element);
-		const index = await this.storage.get_or_element(element_key, -1);
-		return index;
-	}
+    async element_index(element) {
+        const element_key = MerkleTree.element_to_key(this.prefix, element);
+        const index = await this.storage.get_or_element(element_key, -1);
+        return index;
+    }
 
-	async path(index) {
-		class PathTraverser {
+    async path(index) {
+        class PathTraverser {
             public prefix: string
             public storage: IStorage
             public zero_values: any[]
             public path_elements: string[]
             public path_index: number[]
-			constructor(prefix, storage, zero_values) {
-				this.prefix = prefix;
-				this.storage = storage;
-				this.zero_values = zero_values;
-				this.path_elements = [];
-				this.path_index = [];
-			}
+            constructor(prefix, storage, zero_values) {
+                this.prefix = prefix;
+                this.storage = storage;
+                this.zero_values = zero_values;
+                this.path_elements = [];
+                this.path_index = [];
+            }
 
-			async handle_index(level, element_index, sibling_index) {
-				const sibling = await this.storage.get_or_element(
-					MerkleTree.index_to_key(this.prefix, level, sibling_index),
-					this.zero_values[level],
-				);
-				this.path_elements.push(sibling);
-				this.path_index.push(element_index % 2);
-			}
-		}
-		let traverser = new PathTraverser(this.prefix, this.storage, this.zero_values);
-		const root = await this.storage.get_or_element(
-			MerkleTree.index_to_key(this.prefix, this.n_levels, 0),
-			this.zero_values[this.n_levels],
-		);
+            async handle_index(level, element_index, sibling_index) {
+                const sibling = await this.storage.get_or_element(
+                    MerkleTree.index_to_key(this.prefix, level, sibling_index),
+                    this.zero_values[level],
+                );
+                this.path_elements.push(sibling);
+                this.path_index.push(element_index % 2);
+            }
+        }
+        let traverser = new PathTraverser(this.prefix, this.storage, this.zero_values);
+        const root = await this.storage.get_or_element(
+            MerkleTree.index_to_key(this.prefix, this.n_levels, 0),
+            this.zero_values[this.n_levels],
+        );
 
-		const element = await this.storage.get_or_element(
-			MerkleTree.index_to_key(this.prefix, 0, index),
-			this.zero_values[0],
-		);
+        const element = await this.storage.get_or_element(
+            MerkleTree.index_to_key(this.prefix, 0, index),
+            this.zero_values[0],
+        );
 
-		await this.traverse(index, traverser);
-		return {
-			root,
-			path_elements: traverser.path_elements,
-			path_index: traverser.path_index,
-			element
-		};
-	}
+        await this.traverse(index, traverser);
+        return {
+            root,
+            path_elements: traverser.path_elements,
+            path_index: traverser.path_index,
+            element
+        };
+    }
 
-	async update(index, element, update_log_index?: number, lock_already_acquired?: boolean) {
+    async update(index, element, update_log_index?: number, lock_already_acquired?: boolean) {
         if (!lock_already_acquired) {
             await this.lock.acquireAsync();
         }
-		try {
+        try {
             //console.log(`updating ${index}, ${element}`);
-			class UpdateTraverser {
+            class UpdateTraverser {
                 public prefix: string
                 public storage: IStorage
                 public zero_values: any[]
@@ -146,49 +146,49 @@ export default class MerkleTree {
                 public hasher: IHasher
                 public key_values_to_put: any[]
 
-				constructor(prefix, storage, hasher, element, zero_values) {
-					this.prefix = prefix;
-					this.current_element = element;
-					this.zero_values = zero_values;
-					this.storage = storage;
-					this.hasher = hasher;
-					this.key_values_to_put = [];
-				}
+                constructor(prefix, storage, hasher, element, zero_values) {
+                    this.prefix = prefix;
+                    this.current_element = element;
+                    this.zero_values = zero_values;
+                    this.storage = storage;
+                    this.hasher = hasher;
+                    this.key_values_to_put = [];
+                }
 
-				async handle_index(level, element_index, sibling_index) {
-					if (level == 0) {
-						this.original_element = await this.storage.get_or_element(
-							MerkleTree.index_to_key(this.prefix, level, element_index),
-							this.zero_values[level],
-						);
-						this.key_values_to_put.push({
-							key: MerkleTree.element_to_key(this.prefix, element),
-							value: index.toString(),
-						});
+                async handle_index(level, element_index, sibling_index) {
+                    if (level == 0) {
+                        this.original_element = await this.storage.get_or_element(
+                            MerkleTree.index_to_key(this.prefix, level, element_index),
+                            this.zero_values[level],
+                        );
+                        this.key_values_to_put.push({
+                            key: MerkleTree.element_to_key(this.prefix, element),
+                            value: index.toString(),
+                        });
 
-					}
-					const sibling = await this.storage.get_or_element(
-						MerkleTree.index_to_key(this.prefix, level, sibling_index),
-						this.zero_values[level],
-					);
-					let left, right;
-					if (element_index % 2 == 0) {
-						left = this.current_element;
-						right = sibling;
-					} else {
-						left = sibling;
-						right = this.current_element;
-					}
+                    }
+                    const sibling = await this.storage.get_or_element(
+                        MerkleTree.index_to_key(this.prefix, level, sibling_index),
+                        this.zero_values[level],
+                    );
+                    let left, right;
+                    if (element_index % 2 == 0) {
+                        left = this.current_element;
+                        right = sibling;
+                    } else {
+                        left = sibling;
+                        right = this.current_element;
+                    }
 
-					this.key_values_to_put.push({
-						key: MerkleTree.index_to_key(this.prefix, level, element_index),
-						value: this.current_element,
-					});
-					//console.log(`left: ${left}, right: ${right}`);
-					this.current_element = this.hasher.hash(level, left, right);
-					//console.log(`current_element: ${this.current_element}`);
-				}
-			}
+                    this.key_values_to_put.push({
+                        key: MerkleTree.index_to_key(this.prefix, level, element_index),
+                        value: this.current_element,
+                    });
+                    //console.log(`left: ${left}, right: ${right}`);
+                    this.current_element = this.hasher.hash(level, left, right);
+                    //console.log(`current_element: ${this.current_element}`);
+                }
+            }
             let traverser = new UpdateTraverser(
                 this.prefix,
                 this.storage,
@@ -219,65 +219,65 @@ export default class MerkleTree {
 
             const root = await this.root();
             //console.log(`updated root ${root}`);
-		} finally {
+        } finally {
             if (!lock_already_acquired) {
                 this.lock.release();
             }
-		}
-	}
+        }
+    }
 
-	async traverse(index, handler) {
-		let current_index = index;
-		for (let i = 0; i < this.n_levels; i++) {
-			let sibling_index = current_index;
-			if (current_index % 2 == 0) {
-				sibling_index += 1;
-			} else {
-				sibling_index -= 1;
-			}
-			await handler.handle_index(i, current_index, sibling_index);
-			current_index = Math.floor(current_index / 2);
-		}
-	}
+    async traverse(index, handler) {
+        let current_index = index;
+        for (let i = 0; i < this.n_levels; i++) {
+            let sibling_index = current_index;
+            if (current_index % 2 == 0) {
+                sibling_index += 1;
+            } else {
+                sibling_index -= 1;
+            }
+            await handler.handle_index(i, current_index, sibling_index);
+            current_index = Math.floor(current_index / 2);
+        }
+    }
 
-	async rollback(updates) {
-		await this.lock.acquireAsync();
-		try {
-			const update_log_key = MerkleTree.update_log_to_key(this.prefix);
-			const update_log_index = await this.storage.get(update_log_key);
-			for (let i = 0; i < updates; i++) {
-				const update_log_element_key = MerkleTree.update_log_element_to_key(this.prefix, update_log_index - i);
-				const update_element_log = JSON.parse(await this.storage.get(update_log_element_key));
+    async rollback(updates) {
+        await this.lock.acquireAsync();
+        try {
+            const update_log_key = MerkleTree.update_log_to_key(this.prefix);
+            const update_log_index = await this.storage.get(update_log_key);
+            for (let i = 0; i < updates; i++) {
+                const update_log_element_key = MerkleTree.update_log_element_to_key(this.prefix, update_log_index - i);
+                const update_element_log = JSON.parse(await this.storage.get(update_log_element_key));
 
-				await this.update(update_element_log.index, update_element_log.old_element, update_log_index - i - 1, true);
-			}
-		} finally {
-			this.lock.release();
-		}
-	}
+                await this.update(update_element_log.index, update_element_log.old_element, update_log_index - i - 1, true);
+            }
+        } finally {
+            this.lock.release();
+        }
+    }
 
-	async rollback_to_root(root) {
-		await this.lock.acquireAsync();
-		try {
-			const update_log_key = MerkleTree.update_log_to_key(this.prefix);
-			let update_log_index = await this.storage.get(update_log_key);
-			while (update_log_index >= 0) {
-				const update_log_element_key = MerkleTree.update_log_element_to_key(this.prefix, update_log_index);
-				const update_element_log = JSON.parse(await this.storage.get(update_log_element_key));
+    async rollback_to_root(root) {
+        await this.lock.acquireAsync();
+        try {
+            const update_log_key = MerkleTree.update_log_to_key(this.prefix);
+            let update_log_index = await this.storage.get(update_log_key);
+            while (update_log_index >= 0) {
+                const update_log_element_key = MerkleTree.update_log_element_to_key(this.prefix, update_log_index);
+                const update_element_log = JSON.parse(await this.storage.get(update_log_element_key));
 
-				await this.update(update_element_log.index, update_element_log.old_element, update_log_index, true);
-				const current_root = await this.root();
-				if (current_root == root) {
-					break;
-				}
-				update_log_index -= 1;
-			}
-			if (await this.root() != root) {
-				throw new Error(`could not rollback to root ${root}`);
-			}
-		} finally {
-			this.lock.release();
-		}
-	}
+                await this.update(update_element_log.index, update_element_log.old_element, update_log_index, true);
+                const current_root = await this.root();
+                if (current_root == root) {
+                    break;
+                }
+                update_log_index -= 1;
+            }
+            if (await this.root() != root) {
+                throw new Error(`could not rollback to root ${root}`);
+            }
+        } finally {
+            this.lock.release();
+        }
+    }
 }
 
