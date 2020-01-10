@@ -1,6 +1,6 @@
 {
   "name": "semaphore-merkle-tree",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A TypeScript implementation of the Merkle tree used in the Semaphore zero-knowledge signalling system",
   "main": "build/index.js",
   "scripts": {

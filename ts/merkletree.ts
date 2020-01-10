@@ -131,7 +131,8 @@ export default class MerkleTree {
         };
     }
 
-    async update(index, element, update_log_index?: number, lock_already_acquired?: boolean) {
+    async update(index, leaf, update_log_index?: number, lock_already_acquired?: boolean) {
+        const element = leaf.toString()
         if (!lock_already_acquired) {
             await this.lock.acquireAsync();
         }
