@@ -1,5 +1,5 @@
 import { IStorage, MemStorage } from './storage'
-import { IHasher, Mimc7Hasher, MimcSpongeHasher } from './hashers'
+import { IHasher, Mimc7Hasher, MimcSpongeHasher, PoseidonHasher } from './hashers'
 import MerkleTree from './merkletree'
 
 export = {
@@ -9,6 +9,7 @@ export = {
     hashers: {
         Mimc7Hasher,
         MimcSpongeHasher,
+        PoseidonHasher,
     },
     tree: {
         MerkleTree,
