@@ -35,7 +35,7 @@ describe('tree test', function () {
     });
 
     it('tests empty get', async () => {
-        let {root, path_elements, path_index} = await tree.path(2);
+        let { root, path_elements, path_index } = await tree.path(2);
         const calculated_root = hasher.hash(1,
             path_elements[1],
             hasher.hash(0, default_value, path_elements[0]),
@@ -46,7 +46,7 @@ describe('tree test', function () {
     it('tests insert', async () => {
         await tree.update(0, '5');
         rollback_root = (await tree.path(0)).root;
-        let {root, path_elements, path_index} = await tree.path(0);
+        let { root, path_elements, path_index } = await tree.path(0);
         const calculated_root = hasher.hash(1,
             hasher.hash(0, '5', path_elements[0]),
             path_elements[1],
@@ -59,7 +59,7 @@ describe('tree test', function () {
         await tree.update(2, '9');
         await tree.update(2, '8');
         await tree.update(2, '82');
-        let {root, path_elements, path_index} = await tree.path(0);
+        let { root, path_elements, path_index } = await tree.path(0);
         const calculated_root = hasher.hash(1,
             hasher.hash(0, '5', path_elements[0]),
             path_elements[1],
@@ -70,6 +70,23 @@ describe('tree test', function () {
             path_elements[1],
         );
         assert.notEqual(root, wrong_calculated_root);
+    });
+
+    it('tests if path consistent', async () => {
+        await tree.update(1, '6');
+        await tree.update(2, '9');
+        await tree.update(3, '8');
+        await tree.update(4, '82');
+
+        const p1 = await tree.path(2);
+
+        const index = await tree.element_index('9')
+        const p2 = await tree.path(index)
+
+        assert.strictEqual(index, 2)
+        assert.equal(typeof (index), "number")
+        assert.equal(p1.path_elements.toString(), p2.path_elements.toString());
+
     });
 
     it('tests update log', async () => {
