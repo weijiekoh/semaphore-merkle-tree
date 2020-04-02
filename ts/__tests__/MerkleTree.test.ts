@@ -72,23 +72,6 @@ describe('tree test', function () {
         assert.notEqual(root, wrong_calculated_root);
     });
 
-    it('tests if path consistent', async () => {
-        await tree.update(1, '6');
-        await tree.update(2, '9');
-        await tree.update(3, '8');
-        await tree.update(4, '82');
-
-        const p1 = await tree.path(2);
-
-        const index = await tree.element_index('9')
-        const p2 = await tree.path(index)
-
-        assert.strictEqual(index, 2)
-        assert.equal(typeof (index), "number")
-        assert.equal(p1.path_elements.toString(), p2.path_elements.toString());
-
-    });
-
     it('tests update log', async () => {
         const update_log_key = MerkleTree.update_log_to_key(prefix);
         const update_log_index = await tree.storage.get(update_log_key);
@@ -133,4 +116,20 @@ describe('tree test', function () {
             assert.equal(update_log_element.new_element, '6');
         }
     })
+
+    it('tests if path consistent', async () => {
+        await tree.update(1, '6');
+        await tree.update(2, '9');
+        await tree.update(3, '8');
+        await tree.update(4, '82');
+
+        const p1 = await tree.path(2);
+
+        const index = await tree.element_index('9')
+        const p2 = await tree.path(index)
+
+        assert.strictEqual(index, 2)
+        assert.equal(typeof (index), "number")
+        assert.equal(p1.path_elements.toString(), p2.path_elements.toString());
+    });
 })
