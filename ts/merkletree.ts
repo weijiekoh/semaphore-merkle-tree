@@ -84,7 +84,7 @@ export default class MerkleTree {
     async element_index(element) {
         const element_key = MerkleTree.element_to_key(this.prefix, element);
         const index = await this.storage.get_or_element(element_key, -1);
-        return index;
+        return parseInt(index);
     }
 
     async path(index) {
