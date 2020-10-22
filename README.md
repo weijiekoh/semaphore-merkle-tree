@@ -15,8 +15,8 @@ npm i semaphore-merkle-tree
 ```ts
 import { storage, hashers, tree } from 'semaphore-merkle-tree'
 
-const storage = new hashers.MemStorage()
-const hasher = new storage.MimcSpongeHasher();
+const storage = new storage.MemStorage()
+const hasher = new hashers.MimcSpongeHasher();
 const prefix = 'semaphore';
 const default_value = '0';
 const depth = 2
